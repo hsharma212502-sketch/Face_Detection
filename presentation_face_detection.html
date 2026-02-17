@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Face Detection — OpenCV + Python</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #080c10;
+      --surface: #0e1318;
+      --card: #121820;
+      --border: #1e2a35;
+      --accent: #00e5ff;
+      --accent2: #00ff88;
+      --accent3: #ff6b35;
+      --text: #e2eaf0;
+      --muted: #5a7080;
+      --code-bg: #0a1520;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 60px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      text-align: center;
+      padding: 80px 0 60px;
+      position: relative;
+    }
+
+    .hero-eye {
+      font-size: 72px;
+      display: block;
+      margin-bottom: 24px;
+      animation: pulse 3s ease-in-out infinite;
+      filter: drop-shadow(0 0 20px rgba(0,229,255,0.5));
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 20px rgba(0,229,255,0.4)); }
+      50% { transform: scale(1.08); filter: drop-shadow(0 0 40px rgba(0,229,255,0.8)); }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #00e5ff 0%, #00ff88 50%, #ffffff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 16px;
+    }
+
+    .hero-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .hero-desc {
+      font-size: 1.1rem;
+      color: #8099aa;
+      max-width: 580px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+
+    /* Badges */
+    .badges {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
+    .badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      padding: 5px 12px;
+      border-radius: 4px;
+      border: 1px solid;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .badge-blue  { color: #00e5ff; border-color: #00e5ff30; background: #00e5ff0a; }
+    .badge-green { color: #00ff88; border-color: #00ff8830; background: #00ff880a; }
+    .badge-orange{ color: #ff6b35; border-color: #ff6b3530; background: #ff6b350a; }
+    .badge-white { color: #aabbcc; border-color: #aabbcc30; background: #aabbcc0a; }
+
+    /* ── OVERVIEW ── */
+    .overview-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 8px;
+      padding: 32px 36px;
+      margin-bottom: 56px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .overview-box::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .overview-box p {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: #9ab0be;
+    }
+
+    .overview-box p strong {
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .tagline {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin-top: 16px;
+      letter-spacing: 1px;
+    }
+
+    .tagline span { color: var(--accent2); }
+
+    /* ── SECTION TITLES ── */
+    .section {
+      margin-bottom: 56px;
+      animation: fadeUp 0.6s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .section-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .section h2 {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #ddeeff;
+      margin-bottom: 28px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── FEATURES GRID ── */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px 24px;
+      transition: border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+      cursor: default;
+    }
+
+    .feature-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-4px);
+      box-shadow: 0 12px 40px rgba(0,229,255,0.08);
+    }
+
+    .feature-icon {
+      font-size: 1.6rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .feature-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ccdde8;
+      margin-bottom: 6px;
+    }
+
+    .feature-desc {
+      font-size: 0.82rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── TECH STACK ── */
+    .tech-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+    }
+
+    .tech-table thead tr {
+      background: #0a1520;
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .tech-table th {
+      padding: 12px 20px;
+      text-align: left;
+      color: var(--accent);
+      letter-spacing: 2px;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+    }
+
+    .tech-table td {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+      color: #9ab0be;
+      vertical-align: middle;
+    }
+
+    .tech-table tr:last-child td { border-bottom: none; }
+
+    .tech-table tr:hover td { background: #0e1825; }
+
+    .tech-name {
+      color: var(--accent2);
+      font-weight: 700;
+    }
+
+    /* ── CODE BLOCKS ── */
+    .code-block {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 16px 0;
+    }
+
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #0a1520;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .code-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .code-dots span {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-r { background: #ff5f57; }
+    .dot-y { background: #febc2e; }
+    .dot-g { background: #28c840; }
+
+    .code-lang {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .code-block pre {
+      padding: 20px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+      color: #7fb3cc;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    .code-block pre .cmd   { color: var(--accent2); }
+    .code-block pre .info  { color: var(--accent); }
+    .code-block pre .val   { color: #ff9f6b; }
+    .code-block pre .cmt   { color: var(--muted); }
+
+    /* ── HOW IT WORKS ── */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+    }
+
+    .steps::before {
+      content: '';
+      position: absolute;
+      left: 20px;
+      top: 24px;
+      bottom: 24px;
+      width: 1px;
+      background: linear-gradient(to bottom, var(--accent), var(--accent2), transparent);
+    }
+
+    .step {
+      display: flex;
+      gap: 24px;
+      padding: 20px 0;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: var(--card);
+      border: 1px solid var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--accent);
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .step-content h4 {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #ccdde8;
+      margin-bottom: 4px;
+    }
+
+    .step-content p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── CONTROLS TABLE ── */
+    .controls-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.85rem;
+      margin-top: 16px;
+    }
+
+    .controls-table td {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .controls-table tr:last-child td { border-bottom: none; }
+
+    .key {
+      display: inline-block;
+      background: #0a1520;
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      padding: 2px 10px;
+      color: var(--accent);
+      font-size: 0.8rem;
+    }
+
+    .controls-table td:last-child { color: var(--muted); }
+
+    /* ── FILE TREE ── */
+    .file-tree {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 2;
+    }
+
+    .tree-root { color: var(--accent2); font-weight: 700; }
+    .tree-branch { color: var(--muted); }
+    .tree-file { color: #9ab0be; }
+    .tree-py { color: var(--accent); }
+    .tree-xml { color: #ff9f6b; }
+    .tree-md { color: #aaccbb; }
+    .tree-comment { color: #3a5060; }
+
+    /* ── FOOTER ── */
+    .footer {
+      text-align: center;
+      padding: 48px 0 32px;
+      border-top: 1px solid var(--border);
+      margin-top: 32px;
+    }
+
+    .footer p {
+      font-family: 'Space Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+
+    .footer .accent { color: var(--accent); }
+    .footer .accent2 { color: var(--accent2); }
+
+    /* Scanline animation on hero */
+    .scanline {
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      animation: scan 4s linear infinite;
+      opacity: 0.4;
+    }
+
+    @keyframes scan {
+      0%   { top: 0%; }
+      100% { top: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="scanline"></div>
+    <span class="hero-eye">👁️</span>
+    <h1>Face Detection</h1>
+    <p class="hero-sub">Python &nbsp;·&nbsp; OpenCV &nbsp;·&nbsp; Haar Cascades &nbsp;·&nbsp; Real-Time</p>
+    <p class="hero-desc">
+      Real-time face detection powered by OpenCV and Haar Cascades —
+      because your webcam deserves to be smarter.
+    </p>
+    <div class="badges">
+      <span class="badge badge-blue">Python 3.7+</span>
+      <span class="badge badge-green">OpenCV 4.x</span>
+      <span class="badge badge-orange">Live Webcam</span>
+      <span class="badge badge-white">MIT License</span>
+      <span class="badge badge-green">Active</span>
+    </div>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="overview-box">
+    <p>
+      <strong>Face Detection</strong> is a real-time computer vision project built in Python using
+      <strong>OpenCV</strong> and <strong>Haar Cascade Classifiers</strong>. It taps into your live
+      webcam feed and detects human faces frame by frame — drawing precise bounding boxes around
+      every face it finds, in real time, with zero cloud dependency.
+    </p>
+    <p class="tagline">
+      <span>No APIs.</span> &nbsp; <span>No internet.</span> &nbsp; <span>No black boxes.</span>
+      &nbsp; Just raw computer vision running locally on your machine.
+    </p>
+  </div>
+
+  <!-- FEATURES -->
+  <div class="section">
+    <p class="section-label">✦ Capabilities</p>
+    <h2>✨ Features</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">🎥</span>
+        <div class="feature-title">Live Webcam Detection</div>
+        <div class="feature-desc">Processes your webcam feed in real time, frame by frame, with no perceptible lag.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🧠</span>
+        <div class="feature-title">Haar Cascade Classifier</div>
+        <div class="feature-desc">Uses OpenCV's pre-trained <code style="color:#00e5ff;font-size:0.78rem">haarcascade_frontalface_default.xml</code> for fast, accurate localization.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🟩</span>
+        <div class="feature-title">Bounding Box Rendering</div>
+        <div class="feature-desc">Draws precise green rectangles around every detected face instantly on each frame.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">👥</span>
+        <div class="feature-title">Multi-Face Support</div>
+        <div class="feature-desc">Detects and marks multiple faces simultaneously within a single video frame.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⚡</span>
+        <div class="feature-title">Lightweight & Fast</div>
+        <div class="feature-desc">Runs entirely on CPU — no GPU, no cloud infrastructure, no subscriptions required.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔒</span>
+        <div class="feature-title">100% Offline</div>
+        <div class="feature-desc">All processing happens locally on your machine. No data ever leaves your device.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🧼</span>
+        <div class="feature-title">Zero-Fluff Codebase</div>
+        <div class="feature-desc">Clean, readable Python with minimal dependencies. Easy to study, fork, and extend.</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🛑</span>
+        <div class="feature-title">Graceful Exit</div>
+        <div class="feature-desc">Press <code style="color:#00e5ff;font-size:0.78rem">Q</code> at any time to cleanly terminate the webcam session without errors.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH STACK -->
+  <div class="section">
+    <p class="section-label">✦ Stack</p>
+    <h2>🛠️ Tech Stack</h2>
+    <table class="tech-table">
+      <thead>
+        <tr>
+          <th>Tool</th>
+          <th>Purpose</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="tech-name">Python 3.7+</span></td>
+          <td>Core programming language</td>
+        </tr>
+        <tr>
+          <td><span class="tech-name">OpenCV (cv2)</span></td>
+          <td>Video capture, image processing & bounding box rendering</td>
+        </tr>
+        <tr>
+          <td><span class="tech-name">Haar Cascades</span></td>
+          <td>Pre-trained XML classifier for frontal face detection</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- INSTALLATION -->
+  <div class="section">
+    <p class="section-label">✦ Setup</p>
+    <h2>⚙️ Installation & Setup</h2>
+
+    <p style="color:var(--muted);font-size:0.9rem;margin-bottom:16px;">Ensure Python 3.7+ is installed:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="cmd">python</span> --version   <span class="cmt"># Requires Python 3.7+</span></pre>
+    </div>
+
+    <p style="color:var(--muted);font-size:0.9rem;margin:20px 0 12px;">Clone the repository:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="cmd">git clone</span> https://github.com/yourusername/face-detection-opencv.git
+<span class="cmd">cd</span> face-detection-opencv</pre>
+    </div>
+
+    <p style="color:var(--muted);font-size:0.9rem;margin:20px 0 12px;">Install the only dependency:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="cmd">pip install</span> opencv-python
+<span class="cmt"># Haar Cascade XML ships with OpenCV — nothing else needed</span></pre>
+    </div>
+  </div>
+
+  <!-- HOW TO RUN -->
+  <div class="section">
+    <p class="section-label">✦ Usage</p>
+    <h2>▶️ How to Run</h2>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="code-lang">bash</span>
+      </div>
+      <pre><span class="cmd">python</span> face_detection.py</pre>
+    </div>
+
+    <p style="color:var(--muted);font-size:0.88rem;margin:20px 0 12px;">Your webcam activates instantly. Faces are detected and boxed in real time.</p>
+
+    <table class="controls-table">
+      <tr>
+        <td><span class="key">Q</span></td>
+        <td>Quit and close the webcam window</td>
+      </tr>
+    </table>
+
+    <p style="color:var(--muted);font-size:0.88rem;margin:24px 0 12px;">Example terminal output:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <div class="code-dots"><span class="dot-r"></span><span class="dot-y"></span><span class="dot-g"></span></div>
+        <span class="code-lang">output</span>
+      </div>
+      <pre><span class="info">[INFO]</span> Starting webcam feed...
+<span class="info">[INFO]</span> Face detection active. Press <span class="val">'Q'</span> to quit.
+<span class="info">[INFO]</span> Faces detected in frame: <span class="val">2</span>
+<span class="info">[INFO]</span> Faces detected in frame: <span class="val">1</span>
+<span class="info">[INFO]</span> Session ended by user.</pre>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <div class="section">
+    <p class="section-label">✦ Under the Hood</p>
+    <h2>🧠 How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <h4>Capture</h4>
+          <p>OpenCV opens the default webcam and reads a continuous stream of frames in real time.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <h4>Preprocess</h4>
+          <p>Each frame is converted to grayscale to reduce computational load and improve detection accuracy.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <h4>Detect</h4>
+          <p>The Haar Cascade classifier scans the grayscale frame, identifying regions that match frontal face patterns.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-content">
+          <h4>Render</h4>
+          <p>Bounding boxes are drawn in green around every detected face on the original full-color frame.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">05</div>
+        <div class="step-content">
+          <h4>Display</h4>
+          <p>The annotated frame is pushed to an OpenCV window and rendered live to the screen.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">06</div>
+        <div class="step-content">
+          <h4>Loop</h4>
+          <p>Steps 1–5 repeat for every frame at camera frame rate until the user presses Q to exit.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROJECT STRUCTURE -->
+  <div class="section">
+    <p class="section-label">✦ Structure</p>
+    <h2>📁 Project Structure</h2>
+    <div class="file-tree">
+      <div class="tree-root">face-detection-opencv/</div>
+      <div><span class="tree-branch">│</span></div>
+      <div><span class="tree-branch">├── </span><span class="tree-py">face_detection.py</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-comment"># Main detection script</span></div>
+      <div><span class="tree-branch">├── </span><span class="tree-xml">haarcascade_frontalface_default.xml</span>&nbsp;&nbsp;<span class="tree-comment"># Pre-trained Haar Cascade model</span></div>
+      <div><span class="tree-branch">└── </span><span class="tree-md">README.md</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="tree-comment"># Project documentation</span></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p>Built with <span class="accent2">Python 🐍</span> &amp; <span class="accent">OpenCV 👁️</span> &nbsp;|&nbsp; See the world differently.</p>
+  </div>
+
+</div>
+</body>
+</html>
