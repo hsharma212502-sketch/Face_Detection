@@ -1,0 +1,18 @@
+tensorflow
+keras
+pandas
+numpy
+jupyter
+notebook
+tqdm
+opencv-contrib-python
+# using cnn
+
+images                        labels
+images/angry/ek.png        angry
+images/angry/ek.png        angry
+images/sad/ek.png           sad
+
+load_img(img,grayscale=true)
+
+
